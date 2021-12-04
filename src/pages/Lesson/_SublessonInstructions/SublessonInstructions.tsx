@@ -2,18 +2,20 @@ import { useReactiveVar } from '@apollo/client';
 import { Text } from '@chakra-ui/layout';
 import '@fontsource/roboto';
 import React, { useEffect } from 'react';
-import {
-  codeEditorValueVar,
-  currentChallengeIndexVar,
-  currentSublessonIndexVar,
-} from 'src/cache';
 import { SublessonInstructionsDataFragment } from 'src/generated/graphql';
 import {
   getChallengesFromSublessonChallenges,
-  getSublessonStartingCode,
+  isSublessonIntroduction,
   useGetLessonDescription,
-  useOnClickNext,
 } from 'src/pages/Lesson/_SublessonInstructions/SublessonInstructions.utils';
+import { currentChallengeIndexVar } from 'src/state/challenge/challenge.reactiveVariables';
+import {
+  codeEditorValueVar,
+  contentPanelScrollToTopFunctionVar,
+} from 'src/state/general';
+import { useSublessonNavigation } from 'src/state/sublesson/sublesson';
+import { currentSublessonIndexVar } from 'src/state/sublesson/sublesson.reactiveVariables';
+import { getSublessonStartingCode } from 'src/state/sublesson/sublesson.utils';
 import { Challenge } from 'components/Challenges/Challenge';
 import { ChallengeButton } from 'components/Challenges/Challenge.styles';
 import { ContentPanel } from 'components/ContentPanel/ContentPanel';
@@ -35,34 +37,42 @@ export const SublessonInstructions = React.memo(
     sublesson,
     totalSublessons,
   }: props) => {
-    const { challenges, descriptions, id, name, lesson } = sublesson;
     const currentChallengeIndex = useReactiveVar(currentChallengeIndexVar);
     const currentSublessonIndex = useReactiveVar(currentSublessonIndexVar);
-    const description = useGetLessonDescription(descriptions);
-    const parsedChallenges = getChallengesFromSublessonChallenges(challenges);
-    const onClickNext = useOnClickNext({ sublesson, totalSublessons });
-    const isLessonIntroduction = currentChallengeIndex === -1;
+    const contentPanelScrollToTopFunction = useReactiveVar(
+      contentPanelScrollToTopFunctionVar,
+    );
+    const description = useGetLessonDescription(sublesson.descriptions);
+    const parsedChallenges = getChallengesFromSublessonChallenges(
+      sublesson.challenges,
+    );
+    const currentChallenge = parsedChallenges[currentChallengeIndex];
+    const { isEndOfLesson, onClickNext } = useSublessonNavigation({
+      sublesson,
+      totalSublessons,
+    });
+    const nextButtonText = isEndOfLesson ? 'Go to next lesson' : 'Next';
+    const isIntroduction = isSublessonIntroduction(currentChallengeIndex);
 
-    const showGoBackIndicator =
-      !isLessonIntroduction || currentSublessonIndex !== 0;
+    const showGoBackIndicator = !isIntroduction || currentSublessonIndex !== 0;
 
     const sublessonText = (
       <>
-        <Text fontSize="26px">{name}</Text>
+        <Text fontSize="26px">{sublesson.name}</Text>
         <Markdown containerOverrides={{ mb: '35px', mt: '10px' }}>
           {description}
         </Markdown>
 
-        {isLessonIntroduction && (
+        {isIntroduction && (
           <ChallengeButton onClick={onClickNext}>
-            {challenges.length ? 'Begin Challenges' : 'Next'}
+            {sublesson.challenges.length ? 'Begin Challenges' : 'Next'}
           </ChallengeButton>
         )}
       </>
     );
 
     const onGoBack = () => {
-      if (currentChallengeIndex === -1) {
+      if (isIntroduction) {
         currentSublessonIndexVar(currentSublessonIndex - 1);
         currentChallengeIndexVar(lastChallengeIndexOfPreviousSublesson);
       } else {
@@ -72,24 +82,29 @@ export const SublessonInstructions = React.memo(
 
     useEffect(() => {
       codeEditorValueVar(getSublessonStartingCode());
-    }, [id]);
+    }, [sublesson.id]);
+
+    useEffect(contentPanelScrollToTopFunction, [
+      sublesson.id,
+      currentChallenge?.id,
+    ]);
 
     return (
       <ContentPanel
-        // includeSettings={true}
         onGoBack={showGoBackIndicator && onGoBack}
-        secondaryContent={!isLessonIntroduction && sublessonText}
+        secondaryContent={!isIntroduction && sublessonText}
       >
         <>
           <Text fontSize="13px" textTransform="uppercase">
-            {lesson?.name}
+            {sublesson.lesson?.name}
           </Text>
-          {isLessonIntroduction ? (
+          {isIntroduction ? (
             sublessonText
           ) : (
             <Challenge
               challenge={parsedChallenges[currentChallengeIndex]}
               onClickNext={onClickNext}
+              nextButtonText={nextButtonText}
             />
           )}
         </>
@@ -97,3 +112,5 @@ export const SublessonInstructions = React.memo(
     );
   },
 );
+
+SublessonInstructions.displayName = 'SublessonInstructions';

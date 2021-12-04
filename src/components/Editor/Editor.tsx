@@ -2,30 +2,23 @@ import { useReactiveVar } from '@apollo/client';
 import { Box } from '@chakra-ui/react';
 import '@fontsource/roboto-mono';
 import MonacoEditor from '@monaco-editor/react';
-import { useEffect } from 'react';
-import { codeEditorValueVar, currentLogVar, testResultsVar } from 'src/cache';
-import { ChallengeFragment } from 'src/types/generalTypes';
+import { resetTestResults } from 'src/state/challenge/codeChallenge/codeChallenge';
+import { currentLogVar } from 'src/state/editor/editor.reactiveVariables';
+import { codeEditorValueVar } from 'src/state/general';
 import { useDebounced } from 'src/utils/hooks/useDebounced';
 import { getConsoleLogsFromCodeEvaluation } from 'src/workers/utils';
-import { isCodeChallenge } from 'components/Challenges/Challenge.utils';
 import {
-  DEFAULT_EDITOR_STARTING_CODE,
   DEFAULT_MONACO_EDITOR_THEME,
   defineDefaultMonacoTheme,
 } from 'components/Editor/Editor.utils';
 import editorOptions from 'components/Editor/editor-options';
 
-type EditorProps = {
-  challenge: ChallengeFragment | undefined;
-  onMount: () => void;
-};
-
-export const Editor: React.FC<EditorProps> = ({ challenge }) => {
+export const Editor = () => {
   const codeEditorValue = useReactiveVar(codeEditorValueVar);
   const currentLog = useReactiveVar(currentLogVar);
 
   const onChangeEditorValue = (newValue: string | undefined) => {
-    testResultsVar([]);
+    resetTestResults();
     codeEditorValueVar(newValue);
   };
 
@@ -52,7 +45,6 @@ export const Editor: React.FC<EditorProps> = ({ challenge }) => {
       <Box
         bgColor="white"
         color="black"
-        // this doesn't match designs but I might like it more this way?
         borderRadius="10px"
         h="100px"
         mt="auto"
@@ -60,8 +52,10 @@ export const Editor: React.FC<EditorProps> = ({ challenge }) => {
         padding="10px"
         fontFamily="Roboto Mono"
       >
-        {currentLog.map((log) => (
-          <span style={{ display: 'block' }}>{log}</span>
+        {currentLog.map((log, index) => (
+          <span style={{ display: 'block' }} key={log + index}>
+            {log}
+          </span>
         ))}
       </Box>
     </Box>

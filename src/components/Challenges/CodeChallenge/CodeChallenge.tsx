@@ -1,10 +1,11 @@
 import { useReactiveVar } from '@apollo/client';
-import { Button } from '@chakra-ui/button';
-import { Box, Divider, Flex } from '@chakra-ui/layout';
-import { Heading, VStack } from '@chakra-ui/react';
+import { Box, Divider, Flex, Text } from '@chakra-ui/layout';
+import { Heading, VStack, HStack } from '@chakra-ui/react';
 import { useEffect } from 'react';
-import { codeEditorValueVar, testResultsVar } from 'src/cache';
+import Reset from 'src/assets/Reset.svg';
 import { CodeChallengeDataFragment } from 'src/generated/graphql';
+import { testResultsVar } from 'src/state/challenge/codeChallenge/codeChallenge.reactiveVariables';
+import { codeEditorValueVar } from 'src/state/general';
 import { ChallengeHints } from 'components/ChallengeHints/ChallengeHints';
 import {
   ChallengeButton,
@@ -19,15 +20,18 @@ import TestCaseResult from 'components/TestCaseResult/TestCaseResult';
 
 export type CodeChallengeProps = {
   challenge: CodeChallengeDataFragment;
+  nextButtonText: string;
   onClickNext: () => void;
 };
 
 export const CodeChallenge = ({
   challenge,
+  nextButtonText,
   onClickNext,
 }: CodeChallengeProps) => {
   const { id, hints, tests, prompt } = challenge;
   const { runTests } = useCodeChallengeTests(tests);
+  // I now need to differentiate two functions. Reset challenge which is truly to reset it, and another function to get the when a challenge loads.
   const resetChallenge = () => {
     codeEditorValueVar(getCodeChallengeStartingCode(challenge));
     testResultsVar([]);
@@ -52,7 +56,7 @@ export const CodeChallenge = ({
       <Flex spacing={6} mt="auto">
         {canProceed ? (
           <ChallengeButton colorScheme="green" onClick={onClickNext} mr="20px">
-            Next
+            {nextButtonText}
           </ChallengeButton>
         ) : (
           <ChallengeButton colorScheme="green" onClick={runTests} mr="20px">
@@ -65,8 +69,10 @@ export const CodeChallenge = ({
           onClick={resetChallenge}
           variant="ghost"
         >
-          {/* make this button less prominent */}
-          Reset
+          <HStack spacing="5px">
+            <Reset />
+            <Text fontWeight="medium">Reset Code</Text>
+          </HStack>
         </ChallengeButton>
       </Flex>
     </>
@@ -77,7 +83,7 @@ interface ITestsProps {
   tests: CodeChallengeProps['challenge']['tests'];
 }
 
-const Tests: React.FC<ITestsProps> = ({ tests }) => {
+const Tests = ({ tests }: ITestsProps) => {
   const { testResults } = useCodeChallengeTests(tests);
 
   return (
